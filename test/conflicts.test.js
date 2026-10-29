@@ -26,3 +26,20 @@ test("ignoriert stornierte Buchungen", () => {
   const conflicts = findConflicts({ room: "elbe", date: "2026-11-03", start: "10:00", end: "11:00" }, existing);
   assert.strictEqual(conflicts.length, 0);
 });
+
+const ostsee = existing.slice(0, 1);
+const overlapCases = [
+  ["identischer Zeitraum", "10:00", "11:00", 1],
+  ["Überschneidung am Anfang", "09:30", "10:30", 1],
+  ["Überschneidung am Ende", "10:30", "11:30", 1],
+  ["vollständig innerhalb einer bestehenden Buchung", "10:15", "10:45", 1],
+  ["direkt im Anschluss (11:00–12:00)", "11:00", "12:00", 0],
+  ["direkt davor endend (09:00–10:00)", "09:00", "10:00", 0]
+];
+
+for (const [name, start, end, expected] of overlapCases) {
+  test(`Zeitüberschneidung: ${name}`, () => {
+    const conflicts = findConflicts({ room: "ostsee", date: "2026-11-03", start, end }, ostsee);
+    assert.strictEqual(conflicts.length, expected);
+  });
+}
