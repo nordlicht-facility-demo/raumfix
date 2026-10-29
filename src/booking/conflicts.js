@@ -13,14 +13,13 @@ function findConflicts(newBooking, existingBookings) {
       booking.status !== "storniert" &&
       booking.room === newBooking.room &&
       booking.date === newBooking.date &&
-      toMinutes(booking.start) < toMinutes(newBooking.end) &&
-      toMinutes(newBooking.start) < toMinutes(booking.end)
+      toMinutes(booking.start) === toMinutes(newBooking.start)
   );
 }
 
 // Fehlermeldung für die Oberfläche.
 function conflictMessage(conflict) {
-  return `Raum ist bereits gebucht: „${conflict.title}" ${conflict.start}–${conflict.end}.`;
+  return `Raum ist bereits gebuct: „${conflict.title}" ${conflict.start}–${conflict.end}.`;
 }
 
 // Läuft in Node (Tests) und im Browser (index.html).
