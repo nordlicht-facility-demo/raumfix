@@ -1,0 +1,9 @@
+{
+  "name": "raumfix",
+  "version": "2.4.1",
+  "description": "Raumbuchung der Nordlicht Facility GmbH",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "UNLICENSED"
+}
