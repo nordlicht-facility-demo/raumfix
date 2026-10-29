@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RaumFix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Kopfleiste, darunter Belegungsplan (links, breit) und Buchungsformular (rechts); schmal gestapelt */
+:root{
+  --bg:#f3f6f8; --surface:#ffffff; --surface-2:#e8eef2; --line:#d3dde4;
+  --fg:#16232c; --muted:#5a6b77;
+  --accent:#0f5f7a; --accent-fg:#ffffff; --accent-soft:#d6ebf2;
+  --booking:#2c7a96; --booking-fg:#ffffff; --mine:#c9822b;
+  --ok:#2f7d4f; --ok-soft:#dcefe3; --err:#b23a2e; --err-soft:#f7dfdb;
+  --font-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1519; --surface:#152027; --surface-2:#1c2a32; --line:#2a3b45;
+  --fg:#e3ecf1; --muted:#97a9b4;
+  --accent:#5fb4d0; --accent-fg:#06222c; --accent-soft:#183a47;
+  --booking:#3a8eaa; --booking-fg:#ffffff; --mine:#d99a4c;
+  --ok:#6cc08f; --ok-soft:#173327; --err:#ef8b7f; --err-soft:#3a1d19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1519; --surface:#152027; --surface-2:#1c2a32; --line:#2a3b45;
+  --fg:#e3ecf1; --muted:#97a9b4;
+  --accent:#5fb4d0; --accent-fg:#06222c; --accent-soft:#183a47;
+  --booking:#3a8eaa; --booking-fg:#ffffff; --mine:#d99a4c;
+  --ok:#6cc08f; --ok-soft:#173327; --err:#ef8b7f; --err-soft:#3a1d19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:34px;height:34px;border-radius:8px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:700;font-size:15px;letter-spacing:.02em}
+.brand b{font-size:18px}
+.brand small{display:block;color:var(--muted);font-size:12px;line-height:1.2}
+.user{margin-left:auto;font-size:13px;color:var(--muted);text-align:right}
+.user strong{color:var(--fg)}
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:20px 0 14px}
+.toolbar h1{font-size:22px;margin:0;margin-right:auto;text-wrap:balance}
+label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;flex-direction:column;gap:4px}
+input,select{font:inherit;font-size:15px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.panel h2{font-size:15px;margin:0;padding:12px 14px;border-bottom:1px solid var(--line)}
+.plan{overflow-x:auto}
+.grid{min-width:760px}
+.hours,.row{display:grid;grid-template-columns:170px 1fr}
+.hours .scale{position:relative;height:28px;border-bottom:1px solid var(--line)}
+.hours .scale span{position:absolute;top:6px;transform:translateX(-50%);font-family:var(--font-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row{border-bottom:1px solid var(--line);min-height:62px}
+.row:last-child{border-bottom:0}
+.room{padding:9px 12px;border-right:1px solid var(--line)}
+.room b{display:block;font-size:15px}
+.room small{color:var(--muted);font-size:12px;display:block;line-height:1.35}
+.track{position:relative;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:calc(100%/13) 100%;cursor:copy}
+.slot{position:absolute;top:8px;bottom:8px;border-radius:5px;background:var(--booking);color:var(--booking-fg);font-size:12px;padding:3px 6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;box-shadow:0 0 0 1px var(--surface);opacity:.92}
+.slot.mine{background:var(--mine)}
+.slot .t{font-family:var(--font-mono);font-size:11px;display:block;opacity:.9}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+form{display:grid;gap:12px;padding:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button.primary{font:inherit;font-weight:700;background:var(--accent);color:var(--accent-fg);border:0;border-radius:6px;padding:10px;cursor:pointer}
+button.primary:hover{filter:brightness(1.08)}
+.msg{margin:0 14px 14px;padding:10px 12px;border-radius:6px;font-size:14px}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}
+.msg.err{background:var(--err-soft);color:var(--err)}
+.side{display:grid;gap:20px}
+ul.mine{list-style:none;margin:0;padding:6px 14px 12px;display:grid;gap:8px}
+ul.mine li{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px;font-size:14px}
+ul.mine li:last-child{border-bottom:0}
+ul.mine .when{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.link{font:inherit;font-size:13px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline}
+.empty{color:var(--muted);font-size:14px;padding:12px 14px}
+footer{margin-top:24px;font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between}
+@media (prefers-reduced-motion:no-preference){.slot{transition:opacity .2s}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="brand"><div class="mark" aria-hidden="true">RF</div><div><b>RaumFix</b><small>Nordlicht Facility GmbH · Intranet</small></div></div>
+  <div class="user">Angemeldet als <strong>Petra Lindner</strong><br>Teamleitung Facility</div>
+</div></header>
+
+<main class="wrap">
+  <div class="toolbar">
+    <h1>Besprechungsräume buchen</h1>
+    <label for="day">Tag<input type="date" id="day"></label>
+    <div class="chips" role="group" aria-label="Ausstattung filtern">
+      <button class="chip" id="f-beamer" aria-pressed="false">mit Beamer</button>
+      <button class="chip" id="f-access" aria-pressed="false">barrierefrei</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Belegungsplan</h2>
+      <div class="plan"><div class="grid" id="grid"></div></div>
+      <div class="legend"><span><i style="background:var(--booking)"></i>gebucht</span><span><i style="background:var(--mine)"></i>meine Buchung</span><span>Klick in eine freie Zeile übernimmt Raum und Uhrzeit ins Formular</span></div>
+    </section>
+
+    <div class="side">
+      <section class="panel">
+        <h2>Neue Buchung</h2>
+        <form id="form" novalidate>
+          <label for="b-room">Raum<select id="b-room"></select></label>
+          <label for="b-date">Datum<input type="date" id="b-date" required></label>
+          <div class="two">
+            <label for="b-start">Beginn<select id="b-start"></select></label>
+            <label for="b-end">Ende<select id="b-end"></select></label>
+          </div>
+          <label for="b-title">Anlass<input id="b-title" placeholder="z. B. Abstimmung Reinigungsplan" required></label>
+          <button class="primary" type="submit">Raum buchen</button>
+        </form>
+        <p class="msg" id="msg" hidden role="status"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Meine Buchungen</h2>
+        <ul class="mine" id="mine"></ul>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span><span id="ver">RaumFix</span> · Buchungen im 15-Minuten-Raster, 07:00 bis 20:00 Uhr · Fehler melden: Projekt „Bug Tracking" in Jira</span>
+    <button class="link" id="reset">Demo-Daten zurücksetzen</button>
+  </footer>
+</main>
+
+<script src="src/booking/conflicts.js"></script>
+<script>
+(function(){
+const ROOMS=[
+  {id:"ostsee",name:"Ostsee",seats:8,eq:["Beamer","Whiteboard"],access:true},
+  {id:"nordsee",name:"Nordsee",seats:12,eq:["Beamer","Videokonferenz"],access:false},
+  {id:"elbe",name:"Elbe",seats:6,eq:["Beamer"],access:true},
+  {id:"spree",name:"Spree",seats:4,eq:["Beamer (defekt, ausgebaut)","Whiteboard"],access:false},
+  {id:"havel",name:"Havel",seats:20,eq:["Großbildschirm","Videokonferenz"],access:true}
+];
+const ME="Petra Lindner", OPEN=7*60, CLOSE=20*60, KEY="raumfix-demo-v1";
+const pad=n=>String(n).padStart(2,"0");
+const toMin=t=>{const [h,m]=t.split(":").map(Number);return h*60+m};
+const toTime=m=>pad(Math.floor(m/60))+":"+pad(m%60);
+const today=(()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())})();
+const roomName=id=>(ROOMS.find(r=>r.id===id)||{}).name||id;
+
+function seed(){return[
+  {id:1,room:"ostsee",date:today,start:"10:00",end:"11:00",title:"Weekly Team Facility",by:"Jonas Krüger",status:"aktiv"},
+  {id:2,room:"ostsee",date:today,start:"13:00",end:"14:00",title:"Abnahme Brandschutz",by:"Mira Hansen",status:"aktiv"},
+  {id:3,room:"nordsee",date:today,start:"09:00",end:"10:30",title:"Quartalsplanung Einkauf",by:"Lars Petersen",status:"aktiv"},
+  {id:4,room:"nordsee",date:today,start:"14:00",end:"15:30",title:"Vertriebsrunde Nord",by:"Svenja Brandt",status:"aktiv"},
+  {id:5,room:"nordsee",date:today,start:"14:15",end:"15:00",title:"Bewerbungsgespräch",by:"Tom Weber",status:"aktiv"},
+  {id:6,room:"elbe",date:today,start:"08:30",end:"09:00",title:"Daily Haustechnik",by:"Ole Jensen",status:"aktiv"},
+  {id:7,room:"havel",date:today,start:"15:00",end:"17:00",title:"Betriebsversammlung Vorbereitung",by:"Anke Vogel",status:"aktiv"},
+  {id:8,room:"elbe",date:today,start:"16:00",end:"16:30",title:"Abstimmung Reinigungsplan",by:ME,status:"aktiv"}
+]}
+let bookings;
+try{bookings=JSON.parse(localStorage.getItem(KEY))}catch(e){bookings=null}
+if(!Array.isArray(bookings))bookings=seed();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(bookings))}catch(e){}};
+
+const $=id=>document.getElementById(id);
+const filters={beamer:false,access:false};
+
+function visibleRooms(){
+  return ROOMS.filter(r=>(!filters.beamer||r.eq.some(e=>e.includes("Beamer")))&&(!filters.access||r.access));
+}
+
+function renderGrid(){
+  const day=$("day").value, span=CLOSE-OPEN;
+  let html='<div class="hours"><div></div><div class="scale">';
+  for(let h=7;h<=20;h++)html+=`<span style="left:${(h*60-OPEN)/span*100}%">${pad(h)}</span>`;
+  html+='</div></div>';
+  for(const r of visibleRooms()){
+    const eq=r.eq.join(", ")+(r.access?", barrierefrei":"");
+    html+=`<div class="row"><div class="room"><b>${r.name}</b><small>${r.seats} Plätze · ${eq}</small></div><div class="track" data-room="${r.id}">`;
+    for(const b of bookings.filter(b=>b.room===r.id&&b.date===day&&b.status!=="storniert")){
+      const l=(toMin(b.start)-OPEN)/span*100,w=(toMin(b.end)-toMin(b.start))/span*100;
+      html+=`<div class="slot${b.by===ME?" mine":""}" style="left:${l}%;width:${w}%" title="${b.title} · ${b.start}–${b.end} · ${b.by}"><span class="t">${b.start}–${b.end}</span>${b.title}</div>`;
+    }
+    html+='</div></div>';
+  }
+  $("grid").innerHTML=html;
+  $("grid").querySelectorAll(".track").forEach(t=>t.addEventListener("click",e=>{
+    if(e.target.closest(".slot"))return;
+    const rect=t.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width;
+    let m=Math.floor((OPEN+x*(CLOSE-OPEN))/15)*15; m=Math.min(m,CLOSE-60);
+    $("b-room").value=t.dataset.room;$("b-date").value=$("day").value;
+    $("b-start").value=toTime(m);$("b-end").value=toTime(m+60);$("b-title").focus();
+  }));
+}
+
+function renderMine(){
+  const mine=bookings.filter(b=>b.by===ME&&b.status!=="storniert").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  $("mine").innerHTML=mine.length?mine.map(b=>`<li><div><div>${b.title}</div><div class="when">${roomName(b.room)} · ${b.date.split("-").reverse().join(".")} · ${b.start}–${b.end}</div></div><button class="link" data-cancel="${b.id}">Stornieren</button></li>`).join(""):'<li class="empty">Noch keine Buchungen.</li>';
+  $("mine").querySelectorAll("[data-cancel]").forEach(btn=>btn.addEventListener("click",()=>{
+    const b=bookings.find(x=>x.id===+btn.dataset.cancel);b.status="storniert";
+    console.info("[RaumFix] DELETE /api/bookings/"+b.id,"→ 204 No Content");
+    save();render();show("ok",`Buchung „${b.title}" storniert.`);
+  }));
+}
+
+function render(){renderGrid();renderMine()}
+
+function show(kind,text){const m=$("msg");m.className="msg "+kind;m.textContent=text;m.hidden=false}
+
+// Buchungslogik kommt aus src/booking/conflicts.js (gleicher Code wie im Repository)
+const Booking=window.RaumFixBooking;
+function findConflicts(b){return Booking.findConflicts(b,bookings)}
+
+function createBooking(payload){
+  console.info("[RaumFix] POST /api/bookings",JSON.stringify(payload));
+  if(!payload.title.trim())return{status:400,error:"Bitte einen Anlass angeben."};
+  if(toMin(payload.end)<=toMin(payload.start))return{status:400,error:"Das Ende muss nach dem Beginn liegen."};
+  const conflicts=findConflicts(payload);
+  console.debug("[booking] conflictCheck",{room:payload.room,date:payload.date,start:payload.start,end:payload.end,existingInRoom:bookings.filter(x=>x.room===payload.room&&x.date===payload.date&&x.status!=="storniert").map(x=>x.start+"-"+x.end),conflicts:conflicts.length});
+  if(conflicts.length){const c=conflicts[0];return{status:409,error:Booking.conflictMessage(c)}}
+  const b={...payload,id:Date.now(),by:ME,status:"aktiv"};bookings.push(b);save();
+  return{status:201,booking:b};
+}
+
+$("form").addEventListener("submit",e=>{
+  e.preventDefault();
+  const payload={room:$("b-room").value,date:$("b-date").value,start:$("b-start").value,end:$("b-end").value,title:$("b-title").value};
+  const res=createBooking(payload);
+  console.info("[RaumFix] Antwort",res.status,res.error||"Created");
+  if(res.status===201){
+    show("ok",`${roomName(payload.room)} ist für dich gebucht: ${payload.date.split("-").reverse().join(".")}, ${payload.start}–${payload.end} Uhr. Die Bestätigung kommt per Mail.`);
+    $("b-title").value="";$("day").value=payload.date;render();
+  }else show("err",res.error);
+});
+
+function initSelects(){
+  $("b-room").innerHTML=ROOMS.map(r=>`<option value="${r.id}">${r.name} (${r.seats} Plätze)</option>`).join("");
+  let opts="";for(let m=OPEN;m<=CLOSE;m+=15)opts+=`<option>${toTime(m)}</option>`;
+  $("b-start").innerHTML=opts;$("b-end").innerHTML=opts;
+  $("b-start").value="10:30";$("b-end").value="11:30";$("b-room").value="ostsee";
+  $("b-date").value=today;$("day").value=today;
+}
+
+function toggle(btn,key){btn.addEventListener("click",()=>{filters[key]=!filters[key];btn.setAttribute("aria-pressed",filters[key]);renderGrid()})}
+toggle($("f-beamer"),"beamer");toggle($("f-access"),"access");
+$("day").addEventListener("change",renderGrid);
+$("reset").addEventListener("click",()=>{bookings=seed();save();$("msg").hidden=true;render();console.info("[RaumFix] Demo-Daten zurückgesetzt")});
+
+initSelects();render();
+fetch("package.json").then(r=>r.json()).then(p=>{$("ver").textContent="RaumFix "+p.version;console.info("[RaumFix] Version "+p.version+" geladen, Benutzer:",ME)}).catch(()=>{});
+})();
+</script>
+</body>
+</html>

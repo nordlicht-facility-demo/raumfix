@@ -23,4 +23,9 @@ function conflictMessage(conflict) {
   return `Raum ist bereits gebucht: „${conflict.title}" ${conflict.start}–${conflict.end}.`;
 }
 
-module.exports = { toMinutes, findConflicts, conflictMessage };
+// Läuft in Node (Tests) und im Browser (index.html).
+if (typeof module !== "undefined") {
+  module.exports = { toMinutes, findConflicts, conflictMessage };
+} else {
+  window.RaumFixBooking = { toMinutes, findConflicts, conflictMessage };
+}
