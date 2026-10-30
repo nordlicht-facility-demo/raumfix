@@ -13,8 +13,7 @@ function findConflicts(newBooking, existingBookings) {
       booking.status !== "storniert" &&
       booking.room === newBooking.room &&
       booking.date === newBooking.date &&
-      toMinutes(newBooking.start) < toMinutes(booking.end) &&
-      toMinutes(newBooking.end) > toMinutes(booking.start)
+      toMinutes(booking.start) === toMinutes(newBooking.start)
   );
 }
 
