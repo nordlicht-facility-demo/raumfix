@@ -18,3 +18,6 @@ Diese Datei lesen KI-Agenten, bevor sie im Repository arbeiten. Sie entspricht d
 - Jede Änderung braucht Tests in `test/`. Ausführen mit `npm test` (Node, ohne Abhängigkeiten).
 - Alle Tests müssen grün sein, bevor der Pull Request geöffnet wird.
 - Teste die Akzeptanzkriterien aus dem Vorgang und die Randfälle (z. B. direkt anschließende Buchungen).
+
+## Nicht ändern
+- `.github/workflows/demo-reset.yml` und den Branch `demo-baseline`. Sie gehören zur Demo-Umgebung, nicht zur App.

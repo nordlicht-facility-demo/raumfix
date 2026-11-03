@@ -1,0 +1,57 @@
+name: Demo zurücksetzen
+
+# Setzt RaumFix für die Live-Demo auf den Startpunkt zurück:
+# Buchungslogik 2.4.1 mit Überschneidungsfehler, keine offenen Pull Requests,
+# keine Claude-Branches, Live-App neu ausgeliefert.
+# Start: GitHub → Actions → "Demo zurücksetzen" → "Run workflow".
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Buchungslogik auf Demo-Stand (2.4.1 mit Fehler)
+        run: |
+          git config user.name "Nordlicht Dev"
+          git config user.email "dev@nordlicht-facility.example"
+          git fetch origin demo-baseline
+          git checkout origin/demo-baseline -- src/booking/conflicts.js test/conflicts.test.js package.json
+          if git diff --cached --quiet; then
+            echo "Code ist bereits auf dem Demo-Stand."
+          else
+            git commit -m "Demo-Reset: Stand 2.4.1 mit Überschneidungsfehler"
+            git push origin HEAD:main
+          fi
+
+      - name: Offene Pull Requests schließen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh pr list --state open --json number -q '.[].number'); do
+            gh pr close "$n" --comment "Geschlossen durch Demo-Reset."
+          done
+
+      - name: Claude-Branches löschen
+        run: |
+          for b in $(git ls-remote --heads origin 'claude/*' | awk '{print $2}' | sed 's#refs/heads/##'); do
+            git push origin --delete "$b"
+          done
+
+      - name: Live-App neu ausliefern
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "Pages-Build ließ sich nicht anstoßen, die App aktualisiert sich trotzdem beim nächsten Push."
+
+      - name: Kontrolle (4 Tests, alle grün trotz Fehler)
+        run: npm test
