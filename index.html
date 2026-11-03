@@ -47,6 +47,13 @@ label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:
 input,select{font:inherit;font-size:15px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
+.week{display:flex;gap:6px;align-items:stretch;margin:0 0 10px;flex-wrap:wrap}
+.week button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:var(--r);padding:6px 10px;cursor:pointer;line-height:1.25}
+.week .wd{flex:1 1 0;min-width:64px;text-align:left;padding:6px 8px}
+.week .wd small{display:block;color:var(--muted);font-size:12px}
+.week .wd[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.week .wd[aria-pressed="true"] small{color:var(--accent-fg)}
+.week .wd.today{border:2px solid var(--accent)}
 .chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
@@ -107,6 +114,7 @@ footer{margin-top:24px;font-size:12px;color:var(--muted);display:flex;gap:12px;f
   <div class="layout">
     <section class="panel">
       <h2>Belegungsplan</h2>
+      <div class="week" id="week" role="group" aria-label="Woche wählen"></div>
       <div class="plan"><div class="grid" id="grid"></div></div>
       <div class="legend"><span><i style="background:var(--booking)"></i>gebucht</span><span><i style="background:var(--mine)"></i>meine Buchung</span><span>Klick in eine freie Zeile übernimmt Raum und Uhrzeit ins Formular</span></div>
     </section>
@@ -150,11 +158,15 @@ const ROOMS=[
   {id:"spree",name:"Spree",seats:4,eq:["Beamer (defekt, ausgebaut)","Whiteboard"],access:false},
   {id:"havel",name:"Havel",seats:20,eq:["Großbildschirm","Videokonferenz"],access:true}
 ];
-const ME="Petra Lindner", OPEN=7*60, CLOSE=20*60, KEY="raumfix-demo-v1";
+const ME="Petra Lindner", OPEN=7*60, CLOSE=20*60, KEY="raumfix-demo-v2";
 const pad=n=>String(n).padStart(2,"0");
 const toMin=t=>{const [h,m]=t.split(":").map(Number);return h*60+m};
 const toTime=m=>pad(Math.floor(m/60))+":"+pad(m%60);
-const today=(()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())})();
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parse=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d)};
+const today=iso(new Date());
+const monday=s=>{const d=parse(s);return addDays(s,-((d.getDay()+6)%7))};
 const roomName=id=>(ROOMS.find(r=>r.id===id)||{}).name||id;
 
 function seed(){return[
@@ -165,11 +177,22 @@ function seed(){return[
   {id:5,room:"nordsee",date:today,start:"14:15",end:"15:00",title:"Bewerbungsgespräch",by:"Tom Weber",status:"aktiv"},
   {id:6,room:"elbe",date:today,start:"08:30",end:"09:00",title:"Daily Haustechnik",by:"Ole Jensen",status:"aktiv"},
   {id:7,room:"havel",date:today,start:"15:00",end:"17:00",title:"Betriebsversammlung Vorbereitung",by:"Anke Vogel",status:"aktiv"},
-  {id:8,room:"elbe",date:today,start:"16:00",end:"16:30",title:"Abstimmung Reinigungsplan",by:ME,status:"aktiv"}
+  {id:8,room:"elbe",date:today,start:"16:00",end:"16:30",title:"Abstimmung Reinigungsplan",by:ME,status:"aktiv"},
+  {id:9,room:"ostsee",date:addDays(today,-1),start:"09:00",end:"10:00",title:"Jour fixe Gebäudetechnik",by:"Ole Jensen",status:"aktiv"},
+  {id:10,room:"havel",date:addDays(today,-1),start:"13:00",end:"15:00",title:"Schulung Arbeitssicherheit",by:"Anke Vogel",status:"aktiv"},
+  {id:11,room:"nordsee",date:addDays(today,1),start:"10:00",end:"12:00",title:"Lieferantengespräch Catering",by:"Lars Petersen",status:"aktiv"},
+  {id:12,room:"ostsee",date:addDays(today,1),start:"14:00",end:"15:00",title:"Weekly Team Facility",by:"Jonas Krüger",status:"aktiv"},
+  {id:13,room:"elbe",date:addDays(today,2),start:"08:30",end:"09:00",title:"Daily Haustechnik",by:"Ole Jensen",status:"aktiv"},
+  {id:14,room:"spree",date:addDays(today,2),start:"11:00",end:"12:00",title:"Bewerbungsgespräch",by:"Tom Weber",status:"aktiv"},
+  {id:15,room:"havel",date:addDays(today,3),start:"09:00",end:"12:00",title:"Workshop Flächenplanung",by:"Mira Hansen",status:"aktiv"},
+  {id:16,room:"ostsee",date:addDays(today,7),start:"10:00",end:"11:00",title:"Weekly Team Facility",by:"Jonas Krüger",status:"aktiv"},
+  {id:17,room:"nordsee",date:addDays(today,8),start:"13:00",end:"14:30",title:"Quartalsplanung Vertrieb",by:"Svenja Brandt",status:"aktiv"},
+  {id:18,room:"elbe",date:addDays(today,-7),start:"15:00",end:"16:00",title:"Abstimmung Umzug 2. OG",by:ME,status:"aktiv"}
 ]}
 let bookings;
 try{bookings=JSON.parse(localStorage.getItem(KEY))}catch(e){bookings=null}
-if(!Array.isArray(bookings))bookings=seed();
+// Demo-Daten liegen immer um den heutigen Tag herum: fehlen sie für heute, neu anlegen
+if(!Array.isArray(bookings)||!bookings.some(b=>b.id===1&&b.date===today))bookings=seed();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(bookings))}catch(e){}};
 
 const $=id=>document.getElementById(id);
@@ -194,6 +217,7 @@ function renderGrid(){
     html+='</div></div>';
   }
   $("grid").innerHTML=html;
+  renderWeek();
   $("grid").querySelectorAll(".track").forEach(t=>t.addEventListener("click",e=>{
     if(e.target.closest(".slot"))return;
     const rect=t.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width;
@@ -213,6 +237,20 @@ function renderMine(){
   }));
 }
 
+const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];
+function renderWeek(){
+  const day=$("day").value, mon=monday(day);
+  let html='<button id="w-prev" aria-label="Vorherige Woche">‹ Woche</button>';
+  for(let i=0;i<7;i++){const d=addDays(mon,i), n=bookings.filter(b=>b.date===d&&b.status!=="storniert").length;
+    html+=`<button class="wd${d===today?" today":""}" data-day="${d}" aria-pressed="${d===day}"><b>${WD[i]} ${d.slice(8)}.${d.slice(5,7)}.</b><small>${n} ${n===1?"Termin":"Termine"}</small></button>`}
+  html+='<button id="w-next" aria-label="Nächste Woche">Woche ›</button><button id="w-today">Heute</button>';
+  $("week").innerHTML=html;
+  const go=d=>{$("day").value=d;renderGrid()};
+  $("week").querySelectorAll("[data-day]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.day)));
+  $("w-prev").addEventListener("click",()=>go(addDays(day,-7)));
+  $("w-next").addEventListener("click",()=>go(addDays(day,7)));
+  $("w-today").addEventListener("click",()=>go(today));
+}
 function render(){renderGrid();renderMine()}
 
 function show(kind,text){const m=$("msg");m.className="msg "+kind;m.textContent=text;m.hidden=false}
