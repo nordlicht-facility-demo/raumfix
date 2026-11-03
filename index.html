@@ -281,7 +281,10 @@ $("form").addEventListener("submit",e=>{
   if(res.status===201){
     show("ok",`${roomName(payload.room)} ist für dich gebucht: ${payload.date.split("-").reverse().join(".")}, ${payload.start}–${payload.end} Uhr. Die Bestätigung kommt per Mail.`);
     $("b-title").value="";$("day").value=payload.date;render();
-  }else show("err",res.error);
+  }else{
+    show("err",res.error);
+    if(res.status===409){$("day").value=payload.date;render()}
+  }
 });
 
 function initSelects(){
