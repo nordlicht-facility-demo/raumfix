@@ -148,7 +148,10 @@ footer{margin-top:24px;font-size:12px;color:var(--muted);display:flex;gap:12px;f
   </footer>
 </main>
 
-<script src="src/booking/conflicts.js"></script>
+<script>
+// Buchungslogik immer frisch laden (kein Browser-Cache), damit ein Merge sofort sichtbar ist
+document.write('<script src="src/booking/conflicts.js?t='+Date.now()+'"><\/script>');
+</script>
 <script>
 (function(){
 const ROOMS=[
@@ -295,7 +298,7 @@ $("day").addEventListener("change",renderGrid);
 $("reset").addEventListener("click",()=>{bookings=seed();save();$("msg").hidden=true;render();console.info("[RaumFix] Demo-Daten zurückgesetzt")});
 
 initSelects();render();
-fetch("package.json").then(r=>r.json()).then(p=>{$("ver").textContent="RaumFix "+p.version;console.info("[RaumFix] Version "+p.version+" geladen, Benutzer:",ME)}).catch(()=>{});
+fetch("package.json",{cache:"no-store"}).then(r=>r.json()).then(p=>{$("ver").textContent="RaumFix "+p.version;console.info("[RaumFix] Version "+p.version+" geladen, Benutzer:",ME)}).catch(()=>{});
 })();
 </script>
 </body>
